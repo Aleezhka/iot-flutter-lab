@@ -1,121 +1,140 @@
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    const MaterialApp(home: StudentApp(), debugShowCheckedModeBanner: false),
+  );
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class StudentApp extends StatefulWidget {
+  const StudentApp({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<StudentApp> createState() => _StudentAppState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _StudentAppState extends State<StudentApp> {
+  int energy = 50;
+  String emoji = '👨‍🎓';
+  String message = 'Вітаю в універі! Введи щось, щоб почати.';
 
-  void _incrementCounter() {
+  final controller = TextEditingController();
+
+  void processAction() {
+    final input = controller.text.trim().toLowerCase();
+    final int? hours = int.tryParse(input);
+
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      if (hours != null) {
+        if (hours > 0) {
+          energy += hours * 10;
+          emoji = '😴';
+          message = 'Ти поспав $hours год. Сон — це розкіш!';
+        } else if (hours == 0) {
+          emoji = '😐';
+          message = '0 годин сну... ну ти і живеш';
+        } else {
+          emoji = '🤡';
+          message = 'Від\'ємний сон? Ти що, винайшов машину часу?';
+        }
+      } else if (input == 'lab') {
+        energy -= 15;
+        emoji = '👨‍💻';
+        message = 'Лабу здав! Але мінус енергія...';
+      } else if (input == 'exam') {
+        energy -= 40;
+        emoji = '📚';
+        message = 'Сесія висмоктує душу. Тримайся!';
+      } else if (input == 'project') {
+        energy -= 30;
+        emoji = '😫';
+        message = 'Курсач сам себе не напише. Енергія падає.';
+      } else if (input == 'red bull') {
+        energy += 25;
+        emoji = '⚡';
+        message = 'Ред Булл надає крила!';
+      } else if (input == 'avada kedavra') {
+        energy = 0;
+        emoji = '💀';
+        message = 'Тебе відраховано. Game Over.';
+      } else {
+        emoji = '❓';
+        message = 'Студент не знає команди "$input"';
+      }
+
+      if (energy > 100) energy = 100;
+      if (energy < 0) energy = 0;
+
+      if (energy == 0 && input != 'avada kedavra') {
+        emoji = '🪫';
+        message = 'Енергія на нулі. Тобі терміново треба Red Bull або сон!';
+      }
     });
+
+    controller.clear();
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: const Text('Survival Guide: Student Edition'),
+        backgroundColor: Colors.orangeAccent,
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+      body: Padding(
+        padding: const EdgeInsets.all(24),
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('You have pushed the button this many times:'),
+            Text(emoji, style: const TextStyle(fontSize: 100)),
+            const SizedBox(height: 10),
+
+            LinearProgressIndicator(
+              value: energy / 100,
+              minHeight: 15,
+              color: energy > 30 ? Colors.green : Colors.red,
+            ),
+
+            const SizedBox(height: 10),
+
             Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+              'Енергія: $energy%',
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 18, fontStyle: FontStyle.italic),
+            ),
+            const SizedBox(height: 30),
+
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(),
+                labelText: 'Введи: lab, exam, project, red bull або години сну',
+              ),
+              onSubmitted: (_) => processAction(),
+            ),
+            const SizedBox(height: 15),
+
+            ElevatedButton(
+              onPressed: processAction,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orangeAccent,
+              ),
+              child: const Text(
+                'Виконати',
+                style: TextStyle(color: Colors.black),
+              ),
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
       ),
     );
   }
