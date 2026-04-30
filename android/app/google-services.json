@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1028420497124",
+    "project_id": "device-streaming-2987affd",
+    "storage_bucket": "device-streaming-2987affd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1028420497124:android:f829c2d955600956a6c6f1",
+        "android_client_info": {
+          "package_name": "com.example.tamagotchi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyABXTDUtdMi6GV6AW5w_Rb-e06OTkeV3do"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

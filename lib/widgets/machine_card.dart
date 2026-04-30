@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:workshop_app/domain/providers/mqtt_provider.dart';
 import 'package:workshop_app/widgets/status_badge.dart';
 
 class MachineCard extends StatelessWidget {
   const MachineCard({
+    required this.id,
     required this.title,
     required this.status,
     required this.onEdit,
@@ -11,6 +14,7 @@ class MachineCard extends StatelessWidget {
     this.isEmergency = false,
   });
 
+  final String id;
   final String title;
   final String status;
   final bool isEmergency;
@@ -19,17 +23,16 @@ class MachineCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tempStr = context.watch<MqttProvider>().temperatures[id] ?? '--';
+
     return DecoratedBox(
       decoration: BoxDecoration(
-        // Легкий помаранчевий фон для аварії, звичайний для інших
         color: isEmergency
             ? Colors.orange.withValues(alpha: 0.1)
             : Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          // Помаранчева рамка для аварії
           color: isEmergency ? Colors.orange : Colors.white10,
-          // Товстіша рамка, щоб привернути увагу
           width: isEmergency ? 2 : 1,
         ),
       ),
@@ -41,16 +44,30 @@ class MachineCard extends StatelessWidget {
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'ID: $id',
+                        style:
+                            const TextStyle(fontSize: 11, color: Colors.grey),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
                 Row(
@@ -68,9 +85,21 @@ class MachineCard extends StatelessWidget {
                 ),
               ],
             ),
-            StatusBadge(
-              status: status,
-              isEmergency: isEmergency,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.thermostat, size: 16, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$tempStr °C',
+                      style: const TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
+                  ],
+                ),
+                StatusBadge(status: status, isEmergency: isEmergency),
+              ],
             ),
           ],
         ),

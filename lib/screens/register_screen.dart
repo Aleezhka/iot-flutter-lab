@@ -1,12 +1,13 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:workshop_app/data/repositories/storage_interface.dart';
+import 'package:workshop_app/data/repositories/secure_storage_repository.dart';
 import 'package:workshop_app/domain/validators.dart';
 import 'package:workshop_app/widgets/custom_text_field.dart';
 import 'package:workshop_app/widgets/workshop_button.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({required this.storage, super.key});
-  final IStorageRepository storage;
+  final SecureStorageRepo storage;
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -18,13 +19,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmPassCtrl = TextEditingController();
+  bool _isLoading = false;
 
   Future<void> _handleRegister() async {
-    if (_formKey.currentState?.validate() ?? false) {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    setState(() => _isLoading = true);
+    try {
+      // 1. Реєстрація у Firebase
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _emailCtrl.text.trim(),
+        password: _passCtrl.text,
+      );
+
+      // 2. Збереження додаткових даних (ім'я) локально
       await widget.storage.saveUser({
         'name': _nameCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
-        'password': _passCtrl.text,
       });
 
       if (mounted) {
@@ -33,6 +44,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
         Navigator.pop(context);
       }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message ?? 'Помилка реєстрації'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -82,10 +104,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     Validators.validateConfirmPassword(val, _passCtrl.text),
               ),
               const SizedBox(height: 32),
-              WorkshopButton(
-                label: 'Створити акаунт',
-                onPressed: _handleRegister,
-              ),
+              if (_isLoading)
+                const CircularProgressIndicator(color: Color(0xFFFFB347))
+              else
+                WorkshopButton(
+                  label: 'Створити акаунт',
+                  onPressed: _handleRegister,
+                ),
             ],
           ),
         ),
