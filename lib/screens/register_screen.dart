@@ -1,31 +1,93 @@
 import 'package:flutter/material.dart';
+import 'package:workshop_app/data/repositories/storage_interface.dart';
+import 'package:workshop_app/domain/validators.dart';
+import 'package:workshop_app/widgets/custom_text_field.dart';
 import 'package:workshop_app/widgets/workshop_button.dart';
 
-class RegisterScreen extends StatelessWidget {
-  const RegisterScreen({super.key});
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({required this.storage, super.key});
+  final IStorageRepository storage;
+
+  @override
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+  final _confirmPassCtrl = TextEditingController();
+
+  Future<void> _handleRegister() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      await widget.storage.saveUser({
+        'name': _nameCtrl.text.trim(),
+        'email': _emailCtrl.text.trim(),
+        'password': _passCtrl.text,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Успішно! Тепер увійдіть.')),
+        );
+        Navigator.pop(context);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
+    _confirmPassCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('REGISTRATION')),
+      appBar: AppBar(title: const Text('РЕЄСТРАЦІЯ')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const TextField(decoration: InputDecoration(hintText: 'Name')),
-            const SizedBox(height: 16),
-            const TextField(decoration: InputDecoration(hintText: 'Specialty')),
-            const SizedBox(height: 16),
-            const TextField(
-              obscureText: true,
-              decoration: InputDecoration(hintText: 'Password'),
-            ),
-            const SizedBox(height: 32),
-            WorkshopButton(
-              label: 'Create Account',
-              onPressed: () => Navigator.pop(context),
-            ),
-          ],
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              CustomTextField(
+                controller: _nameCtrl,
+                hintText: 'Ім\'я',
+                validator: Validators.validateName,
+              ),
+              const SizedBox(height: 16),
+              CustomTextField(
+                controller: _emailCtrl,
+                hintText: 'Пошта',
+                validator: Validators.validateEmail,
+              ),
+              const SizedBox(height: 16),
+              CustomTextField(
+                controller: _passCtrl,
+                hintText: 'Пароль',
+                obscureText: true,
+                validator: Validators.validatePassword,
+              ),
+              const SizedBox(height: 16),
+              CustomTextField(
+                controller: _confirmPassCtrl,
+                hintText: 'Підтвердіть пароль',
+                obscureText: true,
+                validator: (val) =>
+                    Validators.validateConfirmPassword(val, _passCtrl.text),
+              ),
+              const SizedBox(height: 32),
+              WorkshopButton(
+                label: 'Створити акаунт',
+                onPressed: _handleRegister,
+              ),
+            ],
+          ),
         ),
       ),
     );
