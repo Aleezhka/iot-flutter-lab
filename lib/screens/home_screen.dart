@@ -1,48 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:workshop_app/data/repositories/storage_interface.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:workshop_app/domain/cubits/machine_cubit.dart';
 import 'package:workshop_app/domain/providers/connectivity_provider.dart';
 import 'package:workshop_app/domain/providers/mqtt_provider.dart';
-import 'package:workshop_app/models/machine_model.dart';
 import 'package:workshop_app/widgets/machine_card.dart';
 import 'package:workshop_app/widgets/machine_form_dialog.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({required this.storage, super.key});
-  final IStorageRepository storage;
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  late Future<List<MachineModel>> _machinesFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _machinesFuture = widget.storage.getMachines();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<MqttProvider>().connect();
-    });
-  }
-
-  void _refreshData() {
-    setState(() {
-      _machinesFuture = widget.storage.getMachines();
-    });
-  }
-
-  void _saveMachineLocally(MachineModel m) async {
-    final currentMachines = await _machinesFuture;
-    currentMachines.add(m);
-    await widget.storage.saveMachines(currentMachines);
-    _refreshData();
-  }
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<MachineCubit>().loadMachines();
+      context.read<MqttProvider>().connect();
+    });
+
     final cols = MediaQuery.of(context).size.width > 600 ? 3 : 2;
     final isOnline = context.watch<ConnectivityProvider>().isOnline;
 
@@ -52,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _refreshData,
+            onPressed: () => context.read<MachineCubit>().loadMachines(),
           ),
           IconButton(
             icon: const Icon(Icons.person),
@@ -67,48 +40,46 @@ class _HomeScreenState extends State<HomeScreen> {
               width: double.infinity,
               color: Colors.redAccent,
               padding: const EdgeInsets.all(8),
-              child: const Text(
-                'Офлайн. Показано збережені дані',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              child: const Text('Офлайн режим', textAlign: TextAlign.center),
             ),
           Expanded(
-            child: FutureBuilder<List<MachineModel>>(
-              future: _machinesFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+            child: BlocBuilder<MachineCubit, MachineState>(
+              builder: (context, state) {
+                if (state is MachineLoading) {
                   return const Center(
-                    child: CircularProgressIndicator(color: Colors.orange),
-                  );
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Помилка: ${snapshot.error}'));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('Немає верстатів у цеху'));
-                }
+                      child: CircularProgressIndicator(color: Colors.orange),);
+                } else if (state is MachineError) {
+                  return Center(child: Text(state.message));
+                } else if (state is MachineLoaded) {
+                  final machines = state.machines;
+                  if (machines.isEmpty) {
+                    return const Center(child: Text('Немає верстатів'));
+                  }
 
-                final machines = snapshot.data!;
-                return RefreshIndicator(
-                  onRefresh: () async => _refreshData(),
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: cols,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 1.3,
+                  return RefreshIndicator(
+                    onRefresh: () =>
+                        context.read<MachineCubit>().loadMachines(),
+                    child: GridView.builder(
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: cols,
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        childAspectRatio: 1.3,
+                      ),
+                      itemCount: machines.length,
+                      itemBuilder: (ctx, i) => MachineCard(
+                        id: machines[i].id,
+                        title: machines[i].title,
+                        status: machines[i].status,
+                        isEmergency: machines[i].isEmergency,
+                        onEdit: () {},
+                        onDelete: () {},
+                      ),
                     ),
-                    itemCount: machines.length,
-                    itemBuilder: (ctx, i) => MachineCard(
-                      id: machines[i].id,
-                      title: machines[i].title,
-                      status: machines[i].status,
-                      isEmergency: machines[i].isEmergency,
-                      onEdit: () {},
-                      onDelete: () {},
-                    ),
-                  ),
-                );
+                  );
+                }
+                return const SizedBox();
               },
             ),
           ),
@@ -117,7 +88,9 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => showDialog<void>(
           context: context,
-          builder: (_) => MachineFormDialog(onSave: _saveMachineLocally),
+          builder: (_) => MachineFormDialog(
+            onSave: (m) => context.read<MachineCubit>().addMachine(m),
+          ),
         ),
         child: const Icon(Icons.add),
       ),

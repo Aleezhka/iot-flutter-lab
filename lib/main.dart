@@ -1,11 +1,15 @@
 import 'package:dio/dio.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart'; // ДОДАНО ІМПОРТ BLOC
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 import 'package:workshop_app/data/repositories/api_storage_repository.dart';
 import 'package:workshop_app/data/repositories/secure_storage_repository.dart';
-import 'package:workshop_app/data/repositories/storage_interface.dart'; // ОБОВ'ЯЗКОВО ДОДАЙ ІМПОРТ ІНТЕРФЕЙСУ
+import 'package:workshop_app/data/repositories/storage_interface.dart';
+import 'package:workshop_app/domain/cubits/auth_cubit.dart';
+import 'package:workshop_app/domain/cubits/machine_cubit.dart';
+import 'package:workshop_app/domain/cubits/profile_cubit.dart';
 import 'package:workshop_app/domain/providers/connectivity_provider.dart';
 import 'package:workshop_app/domain/providers/mqtt_provider.dart';
 import 'package:workshop_app/firebase_options.dart';
@@ -32,16 +36,24 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
         ChangeNotifierProvider(create: (_) => MqttProvider()),
+        Provider<IStorageRepository>.value(value: apiRepo),
+        BlocProvider(
+          create: (ctx) => MachineCubit(ctx.read<IStorageRepository>()),
+        ),
+        BlocProvider(
+          create: (ctx) => ProfileCubit(ctx.read<IStorageRepository>()),
+        ),
+        BlocProvider(
+          create: (ctx) => AuthCubit(ctx.read<IStorageRepository>()),
+        ),
       ],
-      child: WorkshopApp(storage: apiRepo),
+      child: const WorkshopApp(),
     ),
   );
 }
 
 class WorkshopApp extends StatelessWidget {
-  const WorkshopApp({required this.storage, super.key});
-
-  final IStorageRepository storage;
+  const WorkshopApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -55,10 +67,12 @@ class WorkshopApp extends StatelessWidget {
       ),
       initialRoute: '/login',
       routes: {
-        '/login': (context) => LoginScreen(storage: storage),
-        '/register': (context) => RegisterScreen(storage: storage),
-        '/home': (context) => HomeScreen(storage: storage),
-        '/profile': (context) => ProfileScreen(storage: storage),
+        '/login': (context) =>
+            LoginScreen(storage: context.read<IStorageRepository>()),
+        '/register': (context) =>
+            RegisterScreen(storage: context.read<IStorageRepository>()),
+        '/home': (context) => const HomeScreen(),
+        '/profile': (context) => const ProfileScreen(),
       },
     );
   }
