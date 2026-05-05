@@ -1,3 +1,4 @@
+import 'package:flashlight_plugin/flashlight_plugin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:workshop_app/domain/cubits/machine_cubit.dart';
@@ -21,7 +22,31 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('WORKSHOP HUB'),
+        title: GestureDetector(
+          onDoubleTap: () async {
+            try {
+              await FlashlightPlugin.toggleLight();
+            } catch (e) {
+              if (!context.mounted) return;
+              showDialog<void>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Увага'),
+                  content: const Text(
+                    'Цей функціонал підтримується лише на Android пристроях.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Зрозуміло'),
+                    ),
+                  ],
+                ),
+              );
+            }
+          },
+          child: const Text('WORKSHOP HUB'),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -47,7 +72,8 @@ class HomeScreen extends StatelessWidget {
               builder: (context, state) {
                 if (state is MachineLoading) {
                   return const Center(
-                      child: CircularProgressIndicator(color: Colors.orange),);
+                    child: CircularProgressIndicator(color: Colors.orange),
+                  );
                 } else if (state is MachineError) {
                   return Center(child: Text(state.message));
                 } else if (state is MachineLoaded) {
