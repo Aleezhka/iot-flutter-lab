@@ -1,4 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:workshop_app/data/repositories/storage_interface.dart';
 import 'package:workshop_app/widgets/workshop_button.dart';
 
@@ -29,13 +31,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _logout() async {
-    await widget.storage.setLoggedInUserId(null);
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
-    }
-  }
-
   Future<void> _showLogoutDialog() async {
     final shouldLogout = await showDialog<bool>(
       context: context,
@@ -57,7 +52,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (shouldLogout == true) {
+      await GoogleSignIn().signOut();
+
+      await FirebaseAuth.instance.signOut();
+
       await widget.storage.setLoggedInUserId(null);
+
       if (mounted) Navigator.pushReplacementNamed(context, '/login');
     }
   }

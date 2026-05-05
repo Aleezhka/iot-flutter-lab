@@ -16,46 +16,29 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<MachineModel> _machines = [];
+  late Future<List<MachineModel>> _machinesFuture;
 
   @override
   void initState() {
     super.initState();
-    _loadMachines();
+    _machinesFuture = widget.storage.getMachines();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<MqttProvider>().connect();
     });
   }
 
-  Future<void> _loadMachines() async {
-    final loaded = await widget.storage.getMachines();
-    setState(() => _machines = loaded);
-  }
-
-  void _saveMachine(MachineModel m) {
+  void _refreshData() {
     setState(() {
-      final i = _machines.indexWhere((e) => e.id == m.id);
-      if (i >= 0) {
-        _machines[i] = m;
-      } else {
-        _machines.add(m);
-      }
+      _machinesFuture = widget.storage.getMachines();
     });
-    widget.storage.saveMachines(_machines);
   }
 
-  void _deleteMachine(String id) {
-    setState(() => _machines.removeWhere((m) => m.id == id));
-    widget.storage.saveMachines(_machines);
-  }
-
-  String _getNextId() {
-    if (_machines.isEmpty) return '1';
-    final maxId = _machines
-        .map((m) => int.tryParse(m.id) ?? 0)
-        .reduce((max, current) => current > max ? current : max);
-    return (maxId + 1).toString();
+  void _saveMachineLocally(MachineModel m) async {
+    final currentMachines = await _machinesFuture;
+    currentMachines.add(m);
+    await widget.storage.saveMachines(currentMachines);
+    _refreshData();
   }
 
   @override
@@ -67,6 +50,10 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('WORKSHOP HUB'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshData,
+          ),
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () => Navigator.pushNamed(context, '/profile'),
@@ -81,35 +68,48 @@ class _HomeScreenState extends State<HomeScreen> {
               color: Colors.redAccent,
               padding: const EdgeInsets.all(8),
               child: const Text(
-                'Немає з\'єднання з Інтернетом',
+                'Офлайн. Показано збережені дані',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
           Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(16),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: cols,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.3,
-              ),
-              itemCount: _machines.length,
-              itemBuilder: (ctx, i) => MachineCard(
-                id: _machines[i].id,
-                title: _machines[i].title,
-                status: _machines[i].status,
-                isEmergency: _machines[i].isEmergency,
-                onEdit: () => showDialog<void>(
-                  context: context,
-                  builder: (_) => MachineFormDialog(
-                    machine: _machines[i],
-                    onSave: _saveMachine,
+            child: FutureBuilder<List<MachineModel>>(
+              future: _machinesFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: Colors.orange),
+                  );
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Помилка: ${snapshot.error}'));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('Немає верстатів у цеху'));
+                }
+
+                final machines = snapshot.data!;
+                return RefreshIndicator(
+                  onRefresh: () async => _refreshData(),
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: cols,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 1.3,
+                    ),
+                    itemCount: machines.length,
+                    itemBuilder: (ctx, i) => MachineCard(
+                      id: machines[i].id,
+                      title: machines[i].title,
+                      status: machines[i].status,
+                      isEmergency: machines[i].isEmergency,
+                      onEdit: () {},
+                      onDelete: () {},
+                    ),
                   ),
-                ),
-                onDelete: () => _deleteMachine(_machines[i].id),
-              ),
+                );
+              },
             ),
           ),
         ],
@@ -117,10 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => showDialog<void>(
           context: context,
-          builder: (_) => MachineFormDialog(
-            onSave: _saveMachine,
-            newId: _getNextId(),
-          ),
+          builder: (_) => MachineFormDialog(onSave: _saveMachineLocally),
         ),
         child: const Icon(Icons.add),
       ),
