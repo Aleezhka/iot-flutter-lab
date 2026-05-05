@@ -1,6 +1,7 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:workshop_app/data/repositories/storage_interface.dart';
+import 'package:workshop_app/domain/cubits/auth_cubit.dart';
 import 'package:workshop_app/domain/validators.dart';
 import 'package:workshop_app/widgets/custom_text_field.dart';
 import 'package:workshop_app/widgets/workshop_button.dart';
@@ -19,43 +20,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmPassCtrl = TextEditingController();
-  bool _isLoading = false;
 
-  Future<void> _handleRegister() async {
+  void _onRegisterPressed() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-
-    setState(() => _isLoading = true);
-    try {
-      // 1. Реєстрація у Firebase
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailCtrl.text.trim(),
-        password: _passCtrl.text,
-      );
-
-      // 2. Збереження додаткових даних (ім'я) локально
-      await widget.storage.saveUser({
-        'name': _nameCtrl.text.trim(),
-        'email': _emailCtrl.text.trim(),
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Успішно! Тепер увійдіть.')),
+    context.read<AuthCubit>().register(
+          _nameCtrl.text.trim(),
+          _emailCtrl.text.trim(),
+          _passCtrl.text,
         );
-        Navigator.pop(context);
-      }
-    } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.message ?? 'Помилка реєстрації'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
   }
 
   @override
@@ -71,49 +43,68 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('РЕЄСТРАЦІЯ')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              CustomTextField(
-                controller: _nameCtrl,
-                hintText: 'Ім\'я',
-                validator: Validators.validateName,
+      body: BlocConsumer<AuthCubit, AuthState>(
+        listener: (context, state) {
+          if (state is AuthSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Успішно! Тепер увійдіть.')),
+            );
+            Navigator.pop(context);
+          } else if (state is AuthError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
               ),
-              const SizedBox(height: 16),
-              CustomTextField(
-                controller: _emailCtrl,
-                hintText: 'Пошта',
-                validator: Validators.validateEmail,
+            );
+          }
+        },
+        builder: (context, state) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  CustomTextField(
+                    controller: _nameCtrl,
+                    hintText: 'Ім\'я',
+                    validator: Validators.validateName,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    controller: _emailCtrl,
+                    hintText: 'Пошта',
+                    validator: Validators.validateEmail,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    controller: _passCtrl,
+                    hintText: 'Пароль',
+                    obscureText: true,
+                    validator: Validators.validatePassword,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    controller: _confirmPassCtrl,
+                    hintText: 'Підтвердіть пароль',
+                    obscureText: true,
+                    validator: (val) =>
+                        Validators.validateConfirmPassword(val, _passCtrl.text),
+                  ),
+                  const SizedBox(height: 32),
+                  if (state is AuthLoading)
+                    const CircularProgressIndicator(color: Color(0xFFFFB347))
+                  else
+                    WorkshopButton(
+                      label: 'Створити акаунт',
+                      onPressed: _onRegisterPressed,
+                    ),
+                ],
               ),
-              const SizedBox(height: 16),
-              CustomTextField(
-                controller: _passCtrl,
-                hintText: 'Пароль',
-                obscureText: true,
-                validator: Validators.validatePassword,
-              ),
-              const SizedBox(height: 16),
-              CustomTextField(
-                controller: _confirmPassCtrl,
-                hintText: 'Підтвердіть пароль',
-                obscureText: true,
-                validator: (val) =>
-                    Validators.validateConfirmPassword(val, _passCtrl.text),
-              ),
-              const SizedBox(height: 32),
-              if (_isLoading)
-                const CircularProgressIndicator(color: Color(0xFFFFB347))
-              else
-                WorkshopButton(
-                  label: 'Створити акаунт',
-                  onPressed: _handleRegister,
-                ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
