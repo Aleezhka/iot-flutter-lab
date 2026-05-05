@@ -36,6 +36,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _showLogoutDialog() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Вихід'),
+        content: const Text('Ви впевнені, що хочете вийти з акаунту?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Скасувати'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Вийти'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true) {
+      await widget.storage.setLoggedInUserId(null);
+      if (mounted) Navigator.pushReplacementNamed(context, '/login');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final name = _userData?['name'] ?? 'Завантаження...';
@@ -66,7 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             WorkshopButton(
               label: 'Вийти',
               color: Colors.redAccent,
-              onPressed: _logout,
+              onPressed: _showLogoutDialog,
             ),
           ],
         ),

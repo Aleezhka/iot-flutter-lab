@@ -5,10 +5,12 @@ class MachineFormDialog extends StatefulWidget {
   const MachineFormDialog({
     required this.onSave,
     this.machine,
+    this.newId,
     super.key,
   });
 
   final MachineModel? machine;
+  final String? newId;
   final void Function(MachineModel) onSave;
 
   @override
@@ -72,7 +74,7 @@ class _MachineFormDialogState extends State<MachineFormDialog> {
         TextButton(
           onPressed: () {
             final newMachine = MachineModel(
-              id: widget.machine?.id ?? DateTime.now().toString(),
+              id: widget.machine?.id ?? widget.newId ?? '1',
               title: _titleCtrl.text.isEmpty ? 'Без назви' : _titleCtrl.text,
               status: _status,
               isEmergency: _isEmergency,
