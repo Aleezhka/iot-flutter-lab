@@ -6,7 +6,7 @@ import 'package:workshop_app/models/machine_model.dart';
 
 class SecureStorageRepo implements IStorageRepository {
   const SecureStorageRepo({required this.storage});
-  
+
   final FlutterSecureStorage storage;
 
   @override
@@ -41,8 +41,12 @@ class SecureStorageRepo implements IStorageRepository {
 
   @override
   Future<List<MachineModel>> getMachines() async {
-    final jsonStr = await storage.read(key: 'machines_data');
+    final email = await getLoggedInUserId();
+    if (email == null) return [];
+
+    final jsonStr = await storage.read(key: 'machines_data_$email');
     if (jsonStr == null) return [];
+    
     final decoded = jsonDecode(jsonStr) as List<dynamic>;
     return decoded
         .map((e) => MachineModel.fromJson(e as Map<String, dynamic>))
@@ -51,7 +55,13 @@ class SecureStorageRepo implements IStorageRepository {
 
   @override
   Future<void> saveMachines(List<MachineModel> machines) async {
+    final email = await getLoggedInUserId();
+    if (email == null) return;
+
     final mappedList = machines.map((m) => m.toJson()).toList();
-    await storage.write(key: 'machines_data', value: jsonEncode(mappedList));
+    await storage.write(
+      key: 'machines_data_$email', 
+      value: jsonEncode(mappedList),
+    );
   }
 }

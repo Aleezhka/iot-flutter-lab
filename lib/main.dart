@@ -1,8 +1,11 @@
+import 'package:dio/dio.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
+import 'package:workshop_app/data/repositories/api_storage_repository.dart';
 import 'package:workshop_app/data/repositories/secure_storage_repository.dart';
+import 'package:workshop_app/data/repositories/storage_interface.dart'; // ОБОВ'ЯЗКОВО ДОДАЙ ІМПОРТ ІНТЕРФЕЙСУ
 import 'package:workshop_app/domain/providers/connectivity_provider.dart';
 import 'package:workshop_app/domain/providers/mqtt_provider.dart';
 import 'package:workshop_app/firebase_options.dart';
@@ -13,14 +16,16 @@ import 'package:workshop_app/screens/register_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Ініціалізація Firebase
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  const storage = FlutterSecureStorage();
-  const repo = SecureStorageRepo(storage: storage);
+  const secureStorage = FlutterSecureStorage();
+  const localRepo = SecureStorageRepo(storage: secureStorage);
+
+  final dio = Dio();
+  final apiRepo = ApiStorageRepo(localRepo: localRepo, dio: dio);
 
   runApp(
     MultiProvider(
@@ -28,14 +33,15 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
         ChangeNotifierProvider(create: (_) => MqttProvider()),
       ],
-      child: const WorkshopApp(storage: repo),
+      child: WorkshopApp(storage: apiRepo),
     ),
   );
 }
 
 class WorkshopApp extends StatelessWidget {
   const WorkshopApp({required this.storage, super.key});
-  final SecureStorageRepo storage;
+
+  final IStorageRepository storage;
 
   @override
   Widget build(BuildContext context) {

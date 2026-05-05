@@ -1,13 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:workshop_app/data/repositories/secure_storage_repository.dart';
+import 'package:workshop_app/data/repositories/storage_interface.dart';
 import 'package:workshop_app/domain/validators.dart';
 import 'package:workshop_app/widgets/custom_text_field.dart';
 import 'package:workshop_app/widgets/workshop_button.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({required this.storage, super.key});
-  final SecureStorageRepo storage;
+  final IStorageRepository storage;
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
